@@ -1,0 +1,10 @@
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - numpy
+  - pandas
+  - openpyxl
+  - pathlib
+  - typing
+  - matplotlib

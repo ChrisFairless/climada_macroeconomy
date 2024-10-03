@@ -1,0 +1,6 @@
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - climada>=4.2.0
+  - climada-petals>=4.2.0

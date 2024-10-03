@@ -1,0 +1,7 @@
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - jupyter
+  - pip:
+    - git+https://github.com/ChrisFairless/nccs-supply-chain.git@make_pip_installable
