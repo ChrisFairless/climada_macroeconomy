@@ -63,7 +63,7 @@ CRED_EXPOSURE_IMPACT_TYPES = {
 
         
 
-
+# TODO refactor: one method to create impacts, one to load
 def get_cred_impacts(country, climate_scenario, impacts_directory=None, write_files=True):
     exposure_impact_types = CRED_EXPOSURE_IMPACT_TYPES[country]
     impacts = {}
@@ -97,22 +97,23 @@ def get_cred_impacts(country, climate_scenario, impacts_directory=None, write_fi
     return impacts
 
 
-def generate_cred_input(country, climate_scenario, measures=None, output_path=None, impacts_directory=None, write_impacts=True, seed=161):
+# TODO refactor: don't create missing impacts
+def generate_cred_input(country, climate_scenario, measures=None, output_path=None, impacts_directory=None, write_files=True, seed=None):
     cred_template = CRED_TEMPLATE[country]
     scenario = 'Scenario'
     cred_input = CREDInput(cred_template, scenarios=[scenario])
 
-    impacts_historical = get_cred_impacts(country=country, climate_scenario='historical', impacts_directory=impacts_directory, write_files=write_impacts)
-    if scenario == 'historical':
+    impacts_historical = get_cred_impacts(country=country, climate_scenario='historical', impacts_directory=impacts_directory, write_files=write_files)
+    if climate_scenario == 'historical':
         impacts_scenario = impacts_historical
     else:
-        impacts_scenario = get_cred_impacts(country=country, climate_scenario=climate_scenario, impacts_directory=impacts_directory, write_files=write_impacts)
+        impacts_scenario = get_cred_impacts(country=country, climate_scenario=climate_scenario, impacts_directory=impacts_directory, write_files=write_files)
 
     exposure_impact_types = CRED_EXPOSURE_IMPACT_TYPES[country]
     for (exposure_type, impact_type) in exposure_impact_types:
         # TODO replace with proper Snapshots and interpolation when CLIMADA is ready for it. For now, for exactly this use case, this is about equivalent
         imp_historical = impacts_historical[exposure_type][impact_type]
-        imp_scenario = impacts_historical[exposure_type][impact_type]
+        imp_scenario = impacts_scenario[exposure_type][impact_type]
         imp_yearset_historical = base.create_yearset(imp_historical, cred_input.n_sim_years, seed)
         imp_yearset_scenario = base.create_yearset(imp_scenario, cred_input.n_sim_years, seed)
         annual_impacts = interpolate_between_yearsets(imp_yearset_historical, imp_yearset_scenario, seed)
@@ -135,7 +136,7 @@ def generate_cred_input(country, climate_scenario, measures=None, output_path=No
             )
     if output_path:
         LOGGER.info('Writing output')
-        cred_input.write_excel(output_path)
+        cred_input.to_excel(output_path, overwrite=True)
     return cred_input
 
 
@@ -154,44 +155,20 @@ def interpolate_between_yearsets(ys1, ys2, seed):
     return annual_impacts
 
 
-def generate_many_cred_inputs(country, climate_scenario, measures, n_inputs_to_create, output_dir, impacts_directory=None, write_impacts=True, seed=161):
-    cred_template = CRED_TEMPLATE[country]
-    scenario = 'Scenario'
-
-    if measures and len(measures) != 0:
-        raise NotImplementedError()
-
-    impacts = get_cred_impacts(country=country, climate_scenario=climate_scenario, impacts_directory=impacts_directory, write_files=write_files)
-
+def generate_many_cred_inputs(country, climate_scenario, measures, n_inputs_to_create, output_dir, impacts_directory=None, write_files=True, overwrite_existing=False, seed=161):
     LOGGER.info(f'Sampling impacts to create possible futures')
-    np.random.set_seed(seed)
+    np.random.seed(seed)
     output_path_list = []
 
     for i in range(n_inputs_to_create):
         i_str = "{:03d}".format(i+1)
-        LOGGER.info(f'Generating future {i_str}')
-        cred_input = CREDInput(cred_template, scenarios=[scenario], set_impacts_to_zero=True)
-
-        for (exposure_type, impact_type) in exposure_impact_types:
-            imp = impacts[exposure_type][impact_type]
-            imp_yearset = base.create_yearset(imp, cred_input.n_sim_years, seed=None)
-            annual_impacts = imp_yearset.at_event
-            if exposure_type == 'housing':
-                cred_input.set_housing_annual_impacts(
-                    scenario=scenario,
-                    annual_impacts=annual_impacts
-                )
-            else:
-                cred_input.set_sector_annual_impacts(
-                    scenario=scenario,
-                    sector=exposure_type,
-                    impact_type=impact_type,
-                    annual_impacts=annual_impacts
-                )
-
-        output_path = Path(output_dir, f'sample_{i_str}.xlsx') 
-        cred_input.to_excel(output_path)
+        output_path = Path(output_dir, f'sample_{i_str}.xlsx')
         output_path_list.append(output_path)
-
-    LOGGER.info(f'Done')
+        if os.path.exists(output_path) and not overwrite_existing:
+            LOGGER.info(f'Input file {i_str} already exists at {output_path} and overwrite_existing = False. Skipping this input.')
+            continue
+        LOGGER.info(f'Generating future {i_str}')
+        _ = generate_cred_input(country=country, climate_scenario=climate_scenario, measures=measures, output_path=output_path, impacts_directory=impacts_directory, write_files=write_files)
+    
+    LOGGER.info(f'Finished creating CRED inputs')
     return output_path_list

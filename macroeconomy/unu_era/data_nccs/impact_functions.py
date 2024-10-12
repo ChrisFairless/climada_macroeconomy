@@ -11,7 +11,7 @@ def get_nccs_impact_function_set(country, hazard_name, sector, business_interrup
     country_iso3alpha = pycountry.countries.get(name=country).alpha_3
     if hazard_name != 'flood':
         raise ValueError('Not ready for non-flood hazards')
-    impf_set = apply_sector_impf_set('river_flood', sector, country_iso3alpha, business_interruption=True, calibrated=True)
+    impf_set = apply_sector_impf_set('river_flood', sector, country_iso3alpha, business_interruption=business_interruption, calibrated=True)
     impf = impf_set.get_func(haz_type='RF')[0]
     impf.haz_type = 'FL'   # In the UNU project flood has hazard ID 'FL'
     return ImpactFuncSet([impf])

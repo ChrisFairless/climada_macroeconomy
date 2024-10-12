@@ -7,8 +7,8 @@ from climada.entity import Entity, ImpactFuncSet
 # Some functions to make our UNU project more friendly
 
 DATA_DIR = {
-    'thailand': '/Users/chrisfairless/Projects/UNU/data/Thailand',
-    'egypt': '/Users/chrisfairless/Projects/UNU/data/Egypt'
+    'thailand': '/Users/chrisfairless/Projects/UNU/data/Thailand/entity',
+    'egypt': '/Users/chrisfairless/Projects/UNU/data/Egypt/entity'
 }
 
 ENTITY_FILES = {
@@ -64,8 +64,7 @@ ENTITY_CODES = {
 def get_unu_entity(country, hazard_name, exposure_name):
     filename = ENTITY_FILES[country][hazard_name][exposure_name]
     pathname = Path(DATA_DIR[country], filename)
-
-    entity = deepcopy(_load_unu_entity(pathname))
+    entity = deepcopy(read_unu_entity(pathname))
 
     # Subset everything to a single exposure type if requested
     category_id = ENTITY_CODES[country][exposure_name]
@@ -75,18 +74,22 @@ def get_unu_entity(country, hazard_name, exposure_name):
     impf_list = entity.impact_funcs.get_func(fun_id = category_id)
     assert(len(impf_list) == 1)  # There should only be one impact function with this ID since it's a one-hazard entity file
     entity.impact_funcs = ImpactFuncSet(impf_list)
-
     return entity, category_id
 
 
 # In my current workflow we read these files quite often. Turn this off to save a bit of RAM
 @functools.cache
-def _load_unu_entity(pathname):
+def read_unu_entity(pathname, haz_type='FL', cleanup=True):
     entity = Entity.from_excel(pathname)
+    if not cleanup:
+        return entity
+
     # Set default impact function ID equal to the category ID
     entity.exposures.gdf['impf_'] = entity.exposures.gdf['category_id']
     # Remove cover and deductible columns: we don't want to do any insurance calculations yet
     entity.exposures.gdf.drop(columns=['cover', 'deductible'], inplace=True)
+
+    entity.impact_funcs = ImpactFuncSet([clean_impact_function(impf) for impf in entity.impact_funcs.get_func(haz_type=haz_type)])
     return entity
 
 
@@ -98,21 +101,28 @@ def get_unu_exposure(country, exposure_name):
 
 # In the current setup there is only one impact per type of exposure, 
 # so we don't need to stress about an impact_type parameter here. Yet.
-def get_unu_impf(country, hazard_name, exposure_name = None):
+def get_unu_impf(country, hazard_name, exposure_name = None, haz_type='FL', clip=None):
     if hazard_name != 'flood':
         raise ValueError('Not ready for non-flood hazards')
     entity, category_id = get_unu_entity(country, hazard_name=hazard_name, exposure_name=exposure_name)
     impf = entity.impact_funcs.get_func(haz_type = 'FL', fun_id = category_id)
+    impf.haz_type = haz_type
+    if clip:
+        impf.mdd = np.clip(impf.mdd, clip[0], clip[1])
+        impf = drop_impf_leading_zeroes(impf)
+    return impf
 
+
+def clean_impact_function(impf):
     # Can't currently deal with negative impacts, sorry!
-    impf.mdd = np.clip(impf.mdd, 0, 100)
+    # impf.mdd = np.clip(impf.mdd, 0, 1)
 
     # bugfix for diarrhoea and people - health which needs 0 impact at 0 hazard
     if impf.mdd[0] != 0:
-        if impf.id not in [105, 302]: 
-            raise ValueError(f'Unexpected non-zero impact function MDD. Thought this was just the case with diarrhoea and health. If you want to fix this add the id {impf.id} to the list where this error is called') 
-        impf.intensity = np.append(np.array([0]), impf.intensity)
-        impf.paa = np.append(np.array([1]), impf.paa)
+        if impf.id not in [105, 302, 501]: 
+            raise ValueError(f'Unexpected non-zero impact function MDD. Thought this was just the case with diarrhoea, health and crops. If you want to fix this add the id {impf.id} to the list where this error is called') 
+        impf.intensity = np.append(np.array([0.99 * impf.intensity[0]]), impf.intensity)
+        impf.paa = np.append(np.array([impf.paa[0]]), impf.paa)
         impf.mdd = np.append(np.array([0]), impf.mdd)
     
     return drop_impf_leading_zeroes(impf)
@@ -131,8 +141,8 @@ def drop_impf_leading_zeroes(impf):
     return drop_impf_leading_zeroes(impf)
 
 
-def get_unu_impf_set(country, hazard_name, exposure_name = None):
-    impf = get_unu_impf(country, hazard_name, exposure_name)
+def get_unu_impf_set(country, hazard_name, exposure_name = None, haz_type='FL', clip=None):
+    impf = get_unu_impf(country, hazard_name, exposure_name, haz_type, clip)
     return ImpactFuncSet([impf])
 
 

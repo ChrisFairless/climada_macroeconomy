@@ -162,7 +162,7 @@ def get_exposure(exposure_type, country):
         if exposure_type == 'tourism':
             return get_nccs_sector_exposure(country, 'services')
     
-        raise ValueError(f'We were note prepared for an exposure type of {exposure_type} in Thailand')
+        raise ValueError(f'We were not prepared for an exposure type of {exposure_type} in Thailand')
 
     if country == 'egypt':
         # If we're requesting something from the ERA study, get it
@@ -191,9 +191,9 @@ def get_exposure(exposure_type, country):
         if exposure_type == 'tourism':
             return get_unu_exposure(country, 'hotels')
 
-        raise ValueError(f'We were note prepared for an exposure type of {exposure_type} in Egypt')
+        raise ValueError(f'We were not prepared for an exposure type of {exposure_type} in Egypt')
 
-    raise ValueError(f'We were note prepared to get exposures from {country}. Please use either "thailand" or "egypt"')
+    raise ValueError(f'We were not prepared to get exposures from {country}. Please use either "thailand" or "egypt"')
 
 
 def get_impact_funcset(hazard_type, exposure_type, impact_type, country):
@@ -202,10 +202,6 @@ def get_impact_funcset(hazard_type, exposure_type, impact_type, country):
         raise ValueError('Sorry I am not ready for non-flood hazards')
     
     if country == 'thailand':
-        # If we're requesting something from the ERA study, get it
-        if exposure_type in ENTITY_CODES['thailand'].keys():
-            return get_unu_impf_set(country, hazard_type, exposure_type)
-        
         # Housing damage from CLIMADA
         if exposure_type == 'housing':
             return get_climada_flood_impact_function_set(country)
@@ -213,7 +209,7 @@ def get_impact_funcset(hazard_type, exposure_type, impact_type, country):
         # Agriculture is the sum of the two crop types in ERA
         # This misses livestock. Another option would be the NCCS agriculture but it's not calibrated well. We'll assume livestock are affected similarly
         if exposure_type == 'agriculture':
-            trees = get_unu_impf(country, 'flood', 'tree crops')
+            trees = get_unu_impf(country, 'flood', 'tree crops', clip=(0, 100))
             grasses = get_unu_impf(country, 'flood', 'grass crops')
             if impact_type in ['labour productivity', 'capital_productivity']:
                 trees = convert_impf_to_sectoral_bi_wet(trees, 'agriculture', trees.id)
@@ -233,20 +229,20 @@ def get_impact_funcset(hazard_type, exposure_type, impact_type, country):
                 return get_nccs_impact_function_set(country, hazard_type, 'services', business_interruption=False)
             return get_nccs_impact_function_set(country, hazard_type, 'services', business_interruption=True)
 
-        raise ValueError(f'We were note prepared for an exposure type of {exposure_type} in Thailand')
-
-    if country == 'egypt':
         # If we're requesting something from the ERA study, get it
-        if exposure_type in ENTITY_CODES['egypt'].keys():
+        if exposure_type in ENTITY_CODES['thailand'].keys():
             return get_unu_impf_set(country, hazard_type, exposure_type)
 
+        raise ValueError(f'We were not prepared for an exposure type of {exposure_type} in Thailand')
+
+    if country == 'egypt':
         # Housing damage from CLIMADA
         if exposure_type == 'housing':
             return get_climada_flood_impact_function_set(country)
 
         # Agriculture is the sum of crops and livestock in ERA
         if exposure_type == 'agriculture':
-            crops = get_unu_impf(country, 'flood', 'crops')
+            crops = get_unu_impf(country, 'flood', 'crops', clip=(0, 100))
             livestock = get_unu_impf(country, 'flood', 'livestock')
             if impact_type in ['labour productivity', 'capital_productivity']:
                 crops = convert_impf_to_sectoral_bi_wet(crops, 'agriculture', crops.id)
@@ -273,6 +269,10 @@ def get_impact_funcset(hazard_type, exposure_type, impact_type, country):
                 hotels = convert_impf_to_sectoral_bi_wet(hotels, 'service', hotels.id)
             return ImpactFuncSet([hotels])
 
-        raise ValueError(f'We were note prepared for an exposure type of {exposure_type} in Egypt')
+        # If we're requesting something from the ERA study, get it
+        if exposure_type in ENTITY_CODES['egypt'].keys():
+            return get_unu_impf_set(country, hazard_type, exposure_type)
+            
+        raise ValueError(f'We were not prepared for an exposure type of {exposure_type} in Egypt')
 
-    raise ValueError(f'We were note prepared to get exposures from {country}. Please use either "thailand" or "egypt"')
+    raise ValueError(f'We were not prepared to get exposures from {country}. Please use either "thailand" or "egypt"')

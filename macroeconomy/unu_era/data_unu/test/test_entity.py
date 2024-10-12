@@ -9,8 +9,8 @@ from macroeconomy.unu_era.data_unu.entity import get_unu_entity, get_unu_exposur
 
 class TestUNUProjectFunctions(unittest.TestCase):
 
-    @patch('macroeconomy.unu_era.data_unu.entity._load_unu_entity')
-    def test_get_unu_entity(self, mock_load_unu_entity):
+    @patch('macroeconomy.unu_era.data_unu.entity.read_unu_entity')
+    def test_get_unu_entity(self, mock_read_unu_entity):
         impf_students = ImpactFunc(
             haz_type='FL',
             id=102,
@@ -19,10 +19,10 @@ class TestUNUProjectFunctions(unittest.TestCase):
             paa = np.array([1, 1, 1])
         )
 
-        # Mock the _load_unu_entity function
+        # Mock the read_unu_entity function
         mock_entity = MagicMock()
         mock_entity.impact_funcs = ImpactFuncSet([impf_students])
-        mock_load_unu_entity.return_value = mock_entity
+        mock_read_unu_entity.return_value = mock_entity
 
         # Test getting a specific exposure
         exposure_name = 'people - students'
