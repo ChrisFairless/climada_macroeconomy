@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../../..')
 import logging
-from macroeconomy.unu_era.base import HAZARD_TYPES, EXPOSURE_IMPACT_TYPES, CLIMATE_SCENARIOS, get_impact_yearset
+from macroeconomy.unu_era.base import HAZARD_TYPES, HAZ_EXPOSURE_IMPACTS, CLIMATE_SCENARIOS, get_impact_yearset
 
 
 # Not a unittest: this takes too long
@@ -29,7 +29,7 @@ def build_all_exposure_impacts():
     if len(HAZARD_TYPES) > 1:
         LOGGER.warning('Not ready to deal with non-flood hazards. This will fail')
 
-    for country, country_impacts in EXPOSURE_IMPACT_TYPES.items():
+    for country, country_impacts in HAZ_EXPOSURE_IMPACTS.items():
         LOGGER.info(f'\nWorking on {country}\n')
         n_impacts = len(country_impacts)
         for i, (exposure_type, impact_type) in enumerate(country_impacts):
@@ -53,7 +53,7 @@ def build_all_scenarios():
         LOGGER.warning('Not ready to deal with non-flood hazards. This will fail')
 
     n_scenarios = len(CLIMATE_SCENARIOS)
-    for country, country_impacts in EXPOSURE_IMPACT_TYPES.items():
+    for country, country_impacts in HAZ_EXPOSURE_IMPACTS.items():
         LOGGER.info(f'\nWorking on {country}\n')
         for i, climate_scenario in enumerate(CLIMATE_SCENARIOS):
             LOGGER.info(f'{i}/{n_scenarios}: {climate_scenario}')

@@ -245,7 +245,8 @@ class CREDController():
                     axs[i_row, i_col].plot(plotdata.index, plotdata[col], color='red', label='Mean of simulations')
                 else:
                     if varname != 'Population':
-                        axs[i_row, i_col].bar(plotdata.index, plotdata[col], color='blue', width=1.0, alpha=0.1, label='_nolegend_')
+                        alpha = 1 / np.power(self.cred_template.n_sim_years, 0.5)
+                        axs[i_row, i_col].bar(plotdata.index, plotdata[col], color='blue', width=1.0, alpha=alpha, label='_nolegend_')
             
             axs[i_row, i_col].set_title(varname)
             custom_lines = [Line2D([0], [0], color='red', lw=1),
@@ -299,67 +300,3 @@ class CREDController():
         result = self._subset_result_years(result, self.start_year, self.end_year)
         result = result[excel_colname]
         return result
-
-    
-    def sample_yearsets(self):
-        simulation_years = np.arange(self.start_year, self.end_year+1)
-        n_years = len(simulation_years)
-        events_per_year = np.ones(n_years).astype('int')
-        ys = {}
-        for (sector, imp) in self.sector_impacts.items():
-            sampling_vect = yearsets.sample_events(events_per_year, imp.frequency)
-            ys[sector] = yearsets.impact_yearset_from_sampling_vect(imp, simulation_years, sampling_vect, correction_fac=False)
-        return ys
-    
-    def empty_yearsets(self):
-        simulation_years = np.arange(self.start_year, self.end_year+1)
-        n_years = len(simulation_years)
-        events_per_year = np.zeros_like(simulation_years).astype('int')
-        ys = {}
-        for (sector, imp) in self.sector_impacts.items():
-            sampling_vect = yearsets.sample_events(events_per_year, imp.frequency)
-            ys[sector] = yearsets.impact_yearset_from_sampling_vect(imp, simulation_years, sampling_vect, correction_fac=False)
-        return ys
-
-
-
-    @classmethod
-    def from_snapshots(
-        input_dir: Union[str, Path],
-        results_dir: Union[str, Path],
-        snapshot_list: List[Union[str, Path, Impact]],
-        n_sim_years: int,
-        seed: int = 161
-    ):
-        pass
-    
-    
-    @classmethod
-    def from_entities(
-        input_dir: Union[str, Path],
-        results_dir: Union[str, Path],
-        entity_list: List[MeasureSet],
-        n_sim_years: int,
-        seed: int = 161
-    ):
-        pass
-
-
-    @classmethod
-    def from_impact_calc_list(
-        input_dir: Union[str, Path],
-        results_dir: Union[str, Path],
-        impact_calc_list: List[Union[str, Path, Impact]],
-        adaptation_list: List[MeasureSet],
-        n_sim_years: int,
-        seed: int = 161
-    ):
-        pass
-
-
-    def run_simulations(self):
-        simulation_years = np.arange(start_year, end_year+1)
-        n_years = len(simulation_years)
-        events_per_year = np.ones(n_years).astype('int')
-        sampling_vect = sample_events(events_per_year, imp.frequency, seed=seed)
-        yearset = impact_yearset_from_sampling_vect(imp, sampled_years, sampling_vect, correction_fac=False)

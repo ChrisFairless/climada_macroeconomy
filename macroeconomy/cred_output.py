@@ -181,6 +181,7 @@ class CREDOutput:
         varlookup_1 = {
             'GDP': 'Y',
             'Houses': 'H',
+            'Consumption': 'C',
             'Population': 'PoP'
         }
         varlookup_2 = {f'{sector} GDP': f'Y_{i+1}' for i, sector in enumerate(sectors)}

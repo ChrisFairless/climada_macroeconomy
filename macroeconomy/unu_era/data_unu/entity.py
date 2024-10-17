@@ -34,6 +34,11 @@ ENTITY_FILES = {
             'livestock':                '5_entity_TODAY_EGYPT_Flood_USD_new.xlsx',
             'hotels':                   '5_entity_TODAY_EGYPT_Flood_USD_new.xlsx',
             'power plant':              '5_entity_TODAY_EGYPT_Flood_USD_new.xlsx'
+        },
+        'heatwave': {
+            'crops':                    '5_entity_TODAY_EGYPT_Flood_USD_new.xlsx',
+            'livestock':                '2_entity_TODAY_EGYPT_HW_USD_Final_Crop_livestock.xlsx',
+            'hotel':                    '2_entity_TODAY_EGYPT_HW_USD_Final_Hotel.xlsx'   
         }
     }
 }
@@ -86,8 +91,6 @@ def read_unu_entity(pathname, haz_type='FL', cleanup=True):
 
     # Set default impact function ID equal to the category ID
     entity.exposures.gdf['impf_'] = entity.exposures.gdf['category_id']
-    # Remove cover and deductible columns: we don't want to do any insurance calculations yet
-    entity.exposures.gdf.drop(columns=['cover', 'deductible'], inplace=True)
 
     entity.impact_funcs = ImpactFuncSet([clean_impact_function(impf) for impf in entity.impact_funcs.get_func(haz_type=haz_type)])
     return entity
@@ -102,15 +105,25 @@ def get_unu_exposure(country, exposure_name):
 # In the current setup there is only one impact per type of exposure, 
 # so we don't need to stress about an impact_type parameter here. Yet.
 def get_unu_impf(country, hazard_name, exposure_name = None, haz_type='FL', clip=None):
-    if hazard_name != 'flood':
-        raise ValueError('Not ready for non-flood hazards')
+    if hazard_name == 'flood':
+        haz_abbrv = 'FL'
+    elif hazard_name == 'heatwave':
+        haz_abbrv = 'HW'
+    else:
+        raise ValueError(f'Not ready for hazard type {hazard_name}')
+
+    if not haz_type:
+        haz_type = haz_abbrv
+
     entity, category_id = get_unu_entity(country, hazard_name=hazard_name, exposure_name=exposure_name)
-    impf = entity.impact_funcs.get_func(haz_type = 'FL', fun_id = category_id)
+    impf = entity.impact_funcs.get_func(haz_type = haz_type, fun_id = category_id)
     impf.haz_type = haz_type
     if clip:
         impf.mdd = np.clip(impf.mdd, clip[0], clip[1])
         impf = drop_impf_leading_zeroes(impf)
     return impf
+
+    
 
 
 def clean_impact_function(impf):
