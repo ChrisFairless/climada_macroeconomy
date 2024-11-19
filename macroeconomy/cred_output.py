@@ -62,7 +62,7 @@ class CREDOutput:
             plot_rows = int(np.ceil(len(varlist)/2))
             plot_cols = 2
 
-        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10, 18), sharex=True)
+        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10, 2.5 * plot_rows), sharex=True)
 
         for i, var in enumerate(varlist):
             i_row = int(np.floor(i/2))
@@ -178,12 +178,19 @@ class CREDOutput:
 
     @staticmethod
     def get_output_var_lookup(sectors):
-        varlookup_1 = {
+        varlookup_misc = {
             'GDP': 'Y',
             'Houses': 'H',
             'Consumption': 'C',
-            'Population': 'PoP'
+            'Population': 'PoP',
+            'Government Debt': 'BG'
         }
-        varlookup_2 = {f'{sector} GDP': f'Y_{i+1}' for i, sector in enumerate(sectors)}
-        varlookup_3 = {f'{sector} Employment': f'N_{i+1}' for i, sector in enumerate(sectors)}
-        return varlookup_1 | varlookup_2 | varlookup_3
+        varlookup_gdp = {f'{sector} GDP': f'Y_{i+1}' for i, sector in enumerate(sectors)}
+        varlookup_employment = {f'{sector} Employment': f'N_{i+1}' for i, sector in enumerate(sectors)}
+        varlookup_capital = {f'{sector} Capital': f'K_{i+1}' for i, sector in enumerate(sectors)}
+        varlookup_domestic_price_index = {f'{sector} Domestic Price Index': f'P_D_{i+1}' for i, sector in enumerate(sectors)}
+        varlookup_wage_index = {f'{sector} Wage Index': f'K_{i+1}' for i, sector in enumerate(sectors)}
+        varlookup_output = {f'{sector} Domestically Used Output': f'Q_D_{i+1}' for i, sector in enumerate(sectors)}
+
+
+        return varlookup_misc | varlookup_gdp | varlookup_employment | varlookup_capital | varlookup_domestic_price_index | varlookup_wage_index | varlookup_output

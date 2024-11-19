@@ -132,7 +132,7 @@ class CREDController():
             out[labelvar] = df
         self.processed_outputs = out
         return out
-    
+
 
     def load_all_inputs(self):
         infiles = os.listdir(self.input_dir)
@@ -173,7 +173,7 @@ class CREDController():
             plot_rows = int(np.ceil(len(varlist)/2))
             plot_cols = 2
 
-        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10, 18), sharex=True)
+        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10, 2.5*plot_rows), sharex=True)
 
         for i, (varname, plotdata) in enumerate(self.processed_outputs.items()):
             i_row = int(np.floor(i/2))
@@ -202,7 +202,11 @@ class CREDController():
                     if col == 'Baseline':
                         continue
                     elif col == 'mean':
-                        axs[i_row, i_col].plot(plotdata.index, (plotdata[col] - baseline) / denominator, color='orange', label='Mean of simulations')
+                        mean_line = (plotdata[col] - baseline) / denominator
+                        axs[i_row, i_col].plot(plotdata.index, mean_line, color='orange', label='Mean of simulations')
+                        ymin = min([0, 5*np.min(mean_line)])
+                        ymax = max([0, 5*np.max(mean_line)])
+                        axs[i_row, i_col].set_ylim([ymin, ymax])
                     else:
                         axs[i_row, i_col].plot(plotdata.index, (plotdata[col] - baseline) / denominator, color='blue', alpha=0.1, label='_nolegend_')
 
@@ -234,7 +238,7 @@ class CREDController():
             plot_rows = int(np.ceil(len(varlist)/2))
             plot_cols = 2
 
-        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10, 18), sharex=True)
+        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10, 2.5 * plot_rows), sharex=True)
 
         for i, (varname, plotdata) in enumerate(self.processed_inputs.items()):
             i_row = int(np.floor(i/2))

@@ -176,7 +176,7 @@ class CREDInput:
             plot_rows = int(np.ceil(len(varlist)/2))
             plot_cols = 2
 
-        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10, 18), sharex=True)
+        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10, 2.5 * plot_rows), sharex=True)
         all_vars = self.data[plot_scenario].columns
         years = self.data[plot_scenario]['Time']
 
@@ -207,9 +207,9 @@ class CREDInput:
             'Damage to houses': 'exo_DH',
         }
         varlookup_2 = {f'{sector} damages': f'exo_D_{i+1}_1' for i, sector in enumerate(sectors)}
-        varlookup_3 = {f'{sector} capital productivity': f'exo_D_N_{i+1}_1' for i, sector in enumerate(sectors)}
-        varlookup_3 = {f'{sector} labour productivity': f'exo_D_K_{i+1}_1' for i, sector in enumerate(sectors)}
-        return varlookup_1 | varlookup_2 | varlookup_3
+        varlookup_3 = {f'{sector} capital productivity': f'exo_D_K_{i+1}_1' for i, sector in enumerate(sectors)}
+        varlookup_4 = {f'{sector} labour productivity': f'exo_D_N_{i+1}_1' for i, sector in enumerate(sectors)}
+        return varlookup_1 | varlookup_2 | varlookup_3 | varlookup_4
 
     @staticmethod
     def read_sectors_from_cred_input(path):
