@@ -19,4 +19,3 @@ def get_nccs_impact_function(country, hazard_name, sector, business_interruption
     impf.haz_type = 'FL'   # In the UNU project flood has hazard ID 'FL'
     return impf
 
-

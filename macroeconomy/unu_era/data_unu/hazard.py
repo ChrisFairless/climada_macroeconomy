@@ -44,7 +44,6 @@ def get_unu_flood_hazard(country, scenario):
 
 
 def get_unu_heatwave_hazard(country, scenario):
-    return_periods = [2, 5, 10, 25]
     if country == 'egypt':
         if scenario == 'historical':
             filename = 'hazard_today_Egypt_HW.mat'
@@ -52,18 +51,56 @@ def get_unu_heatwave_hazard(country, scenario):
             filename = 'Hazard_EGY_RCP45_HW_new.mat'
         elif scenario == 'rcp85':
             filename = 'Hazard_EGY_RCP85_HW_new.mat'
+        else:
+            raise ValueError(f'No data for scenario {scenario}')
+        haz_path = Path(DATA_DIR[country], 'heatwave', filename)
+        haz = climada_haz_from_mat(haz_path)
+        # The event frequencies are wrong in the .mat files
+        return_periods = [10, 25, 50, 75, 100]
+        haz.frequency = np.array([1/rp for rp in return_periods])
 
-    else:
-        raise ValueError(f'Not yet implemented for country {country}')
-    haz_path = Path(DATA_DIR[country], 'heatwave', filename)
-    haz = climada_haz_from_mat(haz_path)
-
-    # The Egypt heatwave hazard seems to have got ordered wrong? This should fix it
-    if country == 'egypt':
+        # The Egypt heatwave hazard is from MATLAB and so we have to flip the coordinates
         haz = flip_hazard(haz)
+        # We also drop coastal centroids because they sometimes have oceanic hazard which is way too high
         haz = drop_coastal_grid_points(haz)
-    
-    return haz    
+        return haz
+
+    if country == 'thailand':
+        if scenario == 'historical':
+            filename = 'Thailand_HW_today.h5'
+        elif scenario == 'rcp26':
+            filename = 'Thailand_HW_RCP45.h5'
+        elif scenario == 'rcp85':
+            filename = 'Thailand_HW_RCP85.h5'
+        else:
+            raise ValueError(f'No data for scenario {scenario}')
+        haz_path = Path(DATA_DIR[country], 'heatwave', filename)
+        haz = Hazard.from_hdf5(haz_path)
+        haz = drop_coastal_grid_points(haz)
+        return haz
+
+    raise ValueError(f'Not yet implemented for country {country}')
+
+
+def get_unu_drought_hazard(country, scenario, invert=False):
+    if country == 'thailand':
+        if scenario == 'historical':
+            filename = 'Thailand_DR_today_.h5'
+        elif scenario == 'rcp26':
+            filename = 'Thai_DR_RCP_45_new.h5'
+        elif scenario == 'rcp85':
+            filename = 'Thai_DR_RCP_85_new.h5'
+        else:
+            raise ValueError(f'No data for scenario {scenario}')
+        haz_path = Path(DATA_DIR[country], 'drought', filename)
+        haz = Hazard.from_hdf5(haz_path)
+        haz.haz_type = 'DR'
+        # haz = flip_hazard(haz)
+        if invert:
+            haz.intensity = -haz.intensity
+        return haz
+
+    raise ValueError(f'Not yet implemented for country {country}')
 
 
 def flip_hazard(haz: Hazard):

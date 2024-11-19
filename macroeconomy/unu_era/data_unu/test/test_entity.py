@@ -52,7 +52,7 @@ class TestUNUProjectFunctions(unittest.TestCase):
         mock_get_unu_entity.return_value = (mock_entity, 102)
 
         # Test getting an exposure
-        exposure = get_unu_exposure('thailand', 'people - students')
+        exposure = get_unu_exposure('thailand', 'people - students', 'flood')
         self.assertEqual(exposure, mock_exposures)
 
         # Verify that get_unu_entity was called with correct arguments

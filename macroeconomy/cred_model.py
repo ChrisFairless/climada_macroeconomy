@@ -45,7 +45,7 @@ class MacroEconomyCRED():
         Subsecstart = [1, 2, 4, 5],
         Subsecend = [1, 3, 4, 5],
         ForwardLooking: bool = False,
-        timeout: int = None,
+        timeout: int = None,   # TODO make this part of the execute command
         # ClimateVarsRegional = ["tas"],
         # ClimateVarsNational = ["SL"],
     ):

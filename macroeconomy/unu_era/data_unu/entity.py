@@ -23,6 +23,15 @@ ENTITY_FILES = {
             'grass crops':              '4_entity_TODAY_THAI_Flood_USD_1.xlsx',
             'markets':                  '4_entity_TODAY_THAI_Flood_USD_1.xlsx',            
             'roads':                    '6_entity_TODAY_THAI_Flood_roads_1.xlsx'
+        },
+        'heatwave': {
+            'people - monks':           '1_entity_TODAY_THAI_HW_ppl_Monks_Final 14Oct.xlsx',
+            'people - students':        '1_entity_TODAY_THAI_HW_ppl_Students_Final 14Oct.xlsx',
+        },
+        'drought': {
+            'tree crops':               '3_entity_TODAY_THAI_D_USD_1_Calibrated_25-10-2024.xlsx',
+            'grass crops':              '3_entity_TODAY_THAI_D_USD_1_Calibrated_25-10-2024.xlsx',
+            'markets':                  '3_entity_TODAY_THAI_D_USD_1_Calibrated_25-10-2024.xlsx'
         }
     },
     'egypt': {
@@ -76,15 +85,19 @@ def get_unu_entity(country, hazard_name, exposure_name):
     if not category_id:
         raise ValueError(f'Could not find an id for {country} {exposure_name}')
     entity.exposures.gdf = entity.exposures.gdf.loc[entity.exposures.gdf['category_id'] == category_id, ]
+    if entity.exposures.gdf.shape[0] == 0:
+        raise ValueError(f'Could not find exposures with category id {category_id}')
     impf_list = entity.impact_funcs.get_func(fun_id = category_id)
+    if len(impf_list) == 0:
+        raise ValueError(f'Could not find an impact function with id {category_id}')
     assert(len(impf_list) == 1)  # There should only be one impact function with this ID since it's a one-hazard entity file
     entity.impact_funcs = ImpactFuncSet(impf_list)
     return entity, category_id
 
 
-# In my current workflow we read these files quite often. Turn this off to save a bit of RAM
+# In my current workflow we read these files quite often. Turn this off to save a bit of time and RAM
 @functools.cache
-def read_unu_entity(pathname, haz_type='FL', cleanup=True):
+def read_unu_entity(pathname, cleanup=True):
     entity = Entity.from_excel(pathname)
     if not cleanup:
         return entity
@@ -92,23 +105,29 @@ def read_unu_entity(pathname, haz_type='FL', cleanup=True):
     # Set default impact function ID equal to the category ID
     entity.exposures.gdf['impf_'] = entity.exposures.gdf['category_id']
 
-    entity.impact_funcs = ImpactFuncSet([clean_impact_function(impf) for impf in entity.impact_funcs.get_func(haz_type=haz_type)])
+    haz_types = entity.impact_funcs.get_hazard_types()
+    assert(len(haz_types) == 1)
+    if haz_types[0] not in ['DR', 'D', 'drought']:
+        # Make sure impact functions have a leading zero. Unless it's drought (where impacts increase with an increasingly -ve index)
+        entity.impact_funcs = ImpactFuncSet([clean_impact_function(impf) for impf in entity.impact_funcs.get_func(haz_type=haz_types[0])])
     return entity
 
 
-def get_unu_exposure(country, exposure_name):
-    entity, category_id = get_unu_entity(country, hazard_name='flood', exposure_name=exposure_name)
+def get_unu_exposure(country, exposure_name, hazard_name):
+    entity, category_id = get_unu_entity(country, hazard_name=hazard_name, exposure_name=exposure_name)
     exp = entity.exposures
     return exp
 
 
 # In the current setup there is only one impact per type of exposure, 
 # so we don't need to stress about an impact_type parameter here. Yet.
-def get_unu_impf(country, hazard_name, exposure_name = None, haz_type='FL', clip=None):
+def get_unu_impf(country, hazard_name, exposure_name, haz_type=None, clip=None):
     if hazard_name == 'flood':
         haz_abbrv = 'FL'
     elif hazard_name == 'heatwave':
         haz_abbrv = 'HW'
+    elif hazard_name == 'drought':
+        haz_abbrv = 'DR'
     else:
         raise ValueError(f'Not ready for hazard type {hazard_name}')
 
@@ -116,14 +135,23 @@ def get_unu_impf(country, hazard_name, exposure_name = None, haz_type='FL', clip
         haz_type = haz_abbrv
 
     entity, category_id = get_unu_entity(country, hazard_name=hazard_name, exposure_name=exposure_name)
+    impfs = entity.impact_funcs
     impf = entity.impact_funcs.get_func(haz_type = haz_type, fun_id = category_id)
+    if isinstance(impf, list):
+        raise ValueError(f'Could not identify an impact function with haz_type {haz_type} and category_id {category_id} for {country} - {hazard_name} / {haz_type} - {exposure_name}')
     impf.haz_type = haz_type
+
+    if hazard_name == 'drought':
+        # reverse the hazard impacts because we're also reversing the hazard
+        impf.intensity = -impf.intensity[::-1]
+        impf.paa = impf.paa[::-1]
+        impf.mdd = impf.mdd[::-1]
+
     if clip:
         impf.mdd = np.clip(impf.mdd, clip[0], clip[1])
-        impf = drop_impf_leading_zeroes(impf)
-    return impf
 
-    
+    impf = drop_impf_leading_zeroes(impf)
+    return impf
 
 
 def clean_impact_function(impf):
@@ -132,7 +160,7 @@ def clean_impact_function(impf):
 
     # bugfix for diarrhoea and people - health which needs 0 impact at 0 hazard
     if impf.mdd[0] != 0:
-        if impf.id not in [105, 302, 501]: 
+        if impf.id not in [105, 201, 302, 501]: 
             raise ValueError(f'Unexpected non-zero impact function MDD. Thought this was just the case with diarrhoea, health and crops. If you want to fix this add the id {impf.id} to the list where this error is called') 
         impf.intensity = np.append(np.array([0.99 * impf.intensity[0]]), impf.intensity)
         impf.paa = np.append(np.array([impf.paa[0]]), impf.paa)
@@ -157,9 +185,3 @@ def drop_impf_leading_zeroes(impf):
 def get_unu_impf_set(country, hazard_name, exposure_name = None, haz_type='FL', clip=None):
     impf = get_unu_impf(country, hazard_name, exposure_name, haz_type, clip)
     return ImpactFuncSet([impf])
-
-
-def _get_unu_adaptation_measure_scaling(sector, exposure_name):
-    entity, category_id = get_unu_entity(country, hazard_name='flood', exposure_name=exposure_name)
-    measures = entity.measure_set
-    return np.array([m.mdd_impact[0] for m in measures]).unique()
